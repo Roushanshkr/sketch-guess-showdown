@@ -568,7 +568,9 @@
             currentWord: '',
             usedWords: new Set(),
             soundEnabled: true,
-            isAdmin: false
+            isAdmin: false,
+            wordWindow: null,
+            gameInProgress: false
         };
 
         // Comprehensive Word Database
@@ -756,9 +758,13 @@
             gameState.timer.duration = duration;
             gameState.timer.remaining = duration;
             gameState.timer.isRunning = true;
+            gameState.gameInProgress = true;
 
             document.getElementById('startStopBtn').textContent = 'Stop Timer';
             document.getElementById('startStopBtn').className = 'btn btn-danger';
+
+            // Hide word on main screen during gameplay
+            hideWordOnMainScreen();
 
             gameState.timer.interval = setInterval(() => {
                 gameState.timer.remaining--;
@@ -767,16 +773,24 @@
                 if (gameState.timer.remaining <= 0) {
                     stopTimer();
                     playTimerAlarm();
+                    // Show word on main screen when timer ends
+                    showWordOnMainScreen();
                 }
             }, 1000);
         }
 
         function stopTimer() {
             gameState.timer.isRunning = false;
+            gameState.gameInProgress = false;
             clearInterval(gameState.timer.interval);
 
             document.getElementById('startStopBtn').textContent = 'Start Timer';
             document.getElementById('startStopBtn').className = 'btn btn-primary';
+
+            // Show word on main screen when timer is manually stopped
+            if (gameState.currentWord) {
+                showWordOnMainScreen();
+            }
         }
 
         function resetTimer() {
@@ -785,6 +799,18 @@
             gameState.timer.duration = duration;
             gameState.timer.remaining = duration;
             updateTimerDisplay();
+
+            // Close word window when resetting
+            if (gameState.wordWindow && !gameState.wordWindow.closed) {
+                gameState.wordWindow.close();
+            }
+
+            // Reset word display
+            const wordDisplay = document.getElementById('wordDisplay');
+            wordDisplay.innerHTML = `
+                <div class="word-text">Select a level to get your word!</div>
+            `;
+            gameState.currentWord = '';
         }
 
         function updateTimerDisplay() {
@@ -886,13 +912,11 @@
             gameState.currentWord = randomWord;
             gameState.usedWords.add(randomWord);
 
-            const wordDisplay = document.getElementById('wordDisplay');
-            wordDisplay.innerHTML = `
-                <div class="word-text">${randomWord}</div>
-                <div style="margin-top: 15px; font-size: 1rem; opacity: 0.8;">
-                    Level ${level} - ${level} Point${level > 1 ? 's' : ''}
-                </div>
-            `;
+            // Open word in popup window
+            openWordWindow(randomWord, level);
+
+            // Show word on main screen initially (before timer starts)
+            showWordOnMainScreen(level);
 
             saveGameData();
         }
@@ -906,6 +930,115 @@
             const custom = customWords[levelKey] || [];
 
             return [...defaultWords, ...custom];
+        }
+
+        // Open word in popup window
+        function openWordWindow(word, level) {
+            // Close existing window if open
+            if (gameState.wordWindow && !gameState.wordWindow.closed) {
+                gameState.wordWindow.close();
+            }
+
+            const windowFeatures = 'width=500,height=400,scrollbars=no,resizable=yes,toolbar=no,menubar=no,location=no,status=no,top=100,left=100';
+            gameState.wordWindow = window.open('', 'wordWindow', windowFeatures);
+
+            if (gameState.wordWindow) {
+                gameState.wordWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Drawing Word</title>
+                        <style>
+                            body {
+                                font-family: Arial, sans-serif;
+                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                margin: 0;
+                                padding: 20px;
+                                display: flex;
+                                flex-direction: column;
+                                justify-content: center;
+                                align-items: center;
+                                min-height: 100vh;
+                                color: white;
+                                text-align: center;
+                            }
+                            .word-container {
+                                background: rgba(255, 255, 255, 0.1);
+                                padding: 30px;
+                                border-radius: 20px;
+                                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                                backdrop-filter: blur(10px);
+                            }
+                            .word {
+                                font-size: 3rem;
+                                font-weight: bold;
+                                margin-bottom: 20px;
+                                text-transform: uppercase;
+                                letter-spacing: 2px;
+                                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+                            }
+                            .level {
+                                font-size: 1.2rem;
+                                opacity: 0.9;
+                            }
+                            .instructions {
+                                margin-top: 20px;
+                                font-size: 1rem;
+                                opacity: 0.8;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="word-container">
+                            <div class="word">${word}</div>
+                            <div class="level">Level ${level} - ${level} Point${level > 1 ? 's' : ''}</div>
+                            <div class="instructions">Draw this word for your team to guess!</div>
+                        </div>
+                    </body>
+                    </html>
+                `);
+                gameState.wordWindow.document.close();
+            }
+        }
+
+        // Show word on main screen
+        function showWordOnMainScreen(level = null) {
+            const wordDisplay = document.getElementById('wordDisplay');
+            if (gameState.currentWord) {
+                const levelInfo = level ? level : getLevelFromCurrentWord();
+                wordDisplay.innerHTML = `
+                    <div class="word-text">${gameState.currentWord}</div>
+                    <div style="margin-top: 15px; font-size: 1rem; opacity: 0.8;">
+                        Level ${levelInfo} - ${levelInfo} Point${levelInfo > 1 ? 's' : ''}
+                    </div>
+                `;
+            }
+        }
+
+        // Hide word on main screen during gameplay
+        function hideWordOnMainScreen() {
+            const wordDisplay = document.getElementById('wordDisplay');
+            wordDisplay.innerHTML = `
+                <div class="word-text" style="font-size: 2rem; opacity: 0.6;">
+                    🎨 Game in Progress 🎨
+                </div>
+                <div style="margin-top: 15px; font-size: 1rem; opacity: 0.8;">
+                    The word is hidden during gameplay
+                </div>
+            `;
+        }
+
+        // Helper function to get level from current word
+        function getLevelFromCurrentWord() {
+            if (!gameState.currentWord) return 1;
+
+            for (let level = 1; level <= 3; level++) {
+                const words = getWordsForLevel(level);
+                if (words.includes(gameState.currentWord)) {
+                    return level;
+                }
+            }
+            return 1; // Default to level 1
         }
 
         // Admin functions
@@ -1138,6 +1271,13 @@
 
         // Initialize the game when page loads
         window.addEventListener('load', initGame);
+
+        // Close word window when main window is closed
+        window.addEventListener('beforeunload', function () {
+            if (gameState.wordWindow && !gameState.wordWindow.closed) {
+                gameState.wordWindow.close();
+            }
+        });
     </script>
 </body>
 

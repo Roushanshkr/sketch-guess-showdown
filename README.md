@@ -19,7 +19,7 @@ Sketch & Guess Showdown is an interactive team-based drawing and guessing game p
 
 ## 🚀 Live Demo
 
-Play the game live at: [https://roushan-shkr.github.io/sketch-guess-showdown/](https://roushan-shkr.github.io/sketch-guess-showdown/)
+Play the game live at: [https://roushanshkr.github.io/sketch-guess-showdown/](https://roushanshkr.github.io/sketch-guess-showdown/)
 
 ## 🛠️ Technologies Used
 
@@ -45,7 +45,7 @@ Play the game live at: [https://roushan-shkr.github.io/sketch-guess-showdown/](h
 
 ### Installation
 ```bash
-git clone https://github.com/Roushan-shkr/sketch-guess-showdown.git
+git clone https://github.com/Roushanshkr/sketch-guess-showdown.git
 cd sketch-guess-showdown
 npm install
 ```
